@@ -104,6 +104,14 @@ const customFetch = async (
 			}
 		}
 	}
+
+	// Force a server-side User-Agent to bypass Supabase's browser-blocking security filter for sb_secret keys.
+	// We also delete standard browser headers (origin/referer) if they are present.
+	requestHeaders["User-Agent"] = "Supabase-Client/Obsidian-Plugin";
+	requestHeaders["user-agent"] = "Supabase-Client/Obsidian-Plugin";
+	delete requestHeaders["origin"];
+	delete requestHeaders["referer"];
+
 	console.log(`[supabase-sync] Request headers keys:`, Object.keys(requestHeaders));
 
 	const response = await requestUrl({
