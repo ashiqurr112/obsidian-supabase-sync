@@ -21326,12 +21326,15 @@ var customFetch = async (url, options = {}) => {
     body = await options.body.arrayBuffer();
   } else if (options.body instanceof ArrayBuffer) {
     body = options.body;
+  } else if (ArrayBuffer.isView(options.body)) {
+    body = options.body.buffer.slice(options.body.byteOffset, options.body.byteOffset + options.body.byteLength);
   } else if (typeof options.body === "string") {
     body = options.body;
   } else if (options.body) {
     body = JSON.stringify(options.body);
   }
-  console.log(`[supabase-sync] Fetching: ${url}`);
+  const safeUrl = new URL(url).href;
+  console.log(`[supabase-sync] Fetching: ${safeUrl}`);
   const requestHeaders = {};
   if (options.headers) {
     if (typeof options.headers.forEach === "function") {
@@ -21353,14 +21356,14 @@ var customFetch = async (url, options = {}) => {
   delete requestHeaders["referer"];
   console.log(`[supabase-sync] Request headers keys:`, Object.keys(requestHeaders));
   const response = await (0, import_obsidian.requestUrl)({
-    url,
+    url: safeUrl,
     method: options.method || "GET",
     headers: requestHeaders,
     body,
     throw: false
   });
   if (response.status >= 400) {
-    console.warn(`[supabase-sync] HTTP ${response.status} Error calling ${url}:`, response.text || response.json);
+    console.warn(`[supabase-sync] HTTP ${response.status} Error calling ${safeUrl}:`, response.text || response.json);
   }
   const headers = makeHeaders(response.headers);
   const ok = response.status >= 200 && response.status < 300;
@@ -21369,7 +21372,7 @@ var customFetch = async (url, options = {}) => {
     status: response.status,
     statusText: statusTextFromCode(response.status),
     headers,
-    url,
+    url: safeUrl,
     redirected: false,
     type: "basic",
     body: null,
@@ -21610,7 +21613,7 @@ function getContentType(path) {
   const ext = (_a = path.split(".").pop()) == null ? void 0 : _a.toLowerCase();
   switch (ext) {
     case "md":
-      return "text/markdown";
+      return "text/markdown; charset=utf-8";
     case "png":
       return "image/png";
     case "jpg":
@@ -21629,9 +21632,9 @@ function getContentType(path) {
     case "m4a":
       return "audio/mp4";
     case "json":
-      return "application/json";
+      return "application/json; charset=utf-8";
     case "canvas":
-      return "application/json";
+      return "application/json; charset=utf-8";
     default:
       return "application/octet-stream";
   }

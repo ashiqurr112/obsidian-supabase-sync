@@ -128,7 +128,7 @@ async function batchProcess<T>(
 function getContentType(path: string): string {
 	const ext = path.split(".").pop()?.toLowerCase();
 	switch (ext) {
-		case "md": return "text/markdown";
+		case "md": return "text/markdown; charset=utf-8";
 		case "png": return "image/png";
 		case "jpg":
 		case "jpeg": return "image/jpeg";
@@ -138,8 +138,8 @@ function getContentType(path: string): string {
 		case "mp3": return "audio/mpeg";
 		case "wav": return "audio/wav";
 		case "m4a": return "audio/mp4";
-		case "json": return "application/json";
-		case "canvas": return "application/json";
+		case "json": return "application/json; charset=utf-8";
+		case "canvas": return "application/json; charset=utf-8";
 		default: return "application/octet-stream";
 	}
 }

@@ -81,13 +81,18 @@ const customFetch = async (
 		body = await options.body.arrayBuffer();
 	} else if (options.body instanceof ArrayBuffer) {
 		body = options.body;
+	} else if (ArrayBuffer.isView(options.body)) {
+		body = options.body.buffer.slice(options.body.byteOffset, options.body.byteOffset + options.body.byteLength);
 	} else if (typeof options.body === "string") {
 		body = options.body;
 	} else if (options.body) {
 		body = JSON.stringify(options.body);
 	}
 
-	console.log(`[supabase-sync] Fetching: ${url}`);
+	// Ensure URL is properly encoded (requestUrl doesn't auto-encode unicode/spaces like browser fetch does)
+	const safeUrl = new URL(url).href;
+
+	console.log(`[supabase-sync] Fetching: ${safeUrl}`);
 	const requestHeaders: Record<string, string> = {};
 	if (options.headers) {
 		if (typeof (options.headers as any).forEach === "function") {
@@ -114,7 +119,7 @@ const customFetch = async (
 	console.log(`[supabase-sync] Request headers keys:`, Object.keys(requestHeaders));
 
 	const response = await requestUrl({
-		url,
+		url: safeUrl,
 		method: (options.method as string) || "GET",
 		headers: requestHeaders,
 		body,
@@ -122,7 +127,7 @@ const customFetch = async (
 	});
 
 	if (response.status >= 400) {
-		console.warn(`[supabase-sync] HTTP ${response.status} Error calling ${url}:`, response.text || response.json);
+		console.warn(`[supabase-sync] HTTP ${response.status} Error calling ${safeUrl}:`, response.text || response.json);
 	}
 
 	const headers = makeHeaders(response.headers);
@@ -134,7 +139,7 @@ const customFetch = async (
 		status: response.status,
 		statusText: statusTextFromCode(response.status),
 		headers,
-		url,
+		url: safeUrl,
 		redirected: false,
 		type: "basic" as ResponseType,
 		body: null as ReadableStream<Uint8Array> | null,
