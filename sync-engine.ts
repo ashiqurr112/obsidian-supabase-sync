@@ -253,10 +253,9 @@ async function deleteFileRemotely(
 
 		// Soft-delete the metadata row
 		const updatedBy = `${deviceId}:${deviceName}`;
-		const { error: dbErr } = await supabase.from(TABLE).upsert(
-			{ path, deleted: true, deleted_at: new Date().toISOString(), updated_by: updatedBy },
-			{ onConflict: "path" }
-		);
+		const { error: dbErr } = await supabase.from(TABLE)
+			.update({ deleted: true, deleted_at: new Date().toISOString(), updated_by: updatedBy })
+			.eq("path", path);
 
 		if (dbErr) {
 			throw new Error(`Failed to mark ${path} as deleted: ${dbErr.message}`);
