@@ -21688,10 +21688,7 @@ async function deleteFileRemotely(supabase, path, deviceId, deviceName) {
   await retryWithBackoff(async () => {
     await supabase.storage.from(BUCKET).remove([path]);
     const updatedBy = `${deviceId}:${deviceName}`;
-    const { error: dbErr } = await supabase.from(TABLE).upsert(
-      { path, deleted: true, deleted_at: (/* @__PURE__ */ new Date()).toISOString(), updated_by: updatedBy },
-      { onConflict: "path" }
-    );
+    const { error: dbErr } = await supabase.from(TABLE).update({ deleted: true, deleted_at: (/* @__PURE__ */ new Date()).toISOString(), updated_by: updatedBy }).eq("path", path);
     if (dbErr) {
       throw new Error(`Failed to mark ${path} as deleted: ${dbErr.message}`);
     }
@@ -21743,7 +21740,6 @@ async function handleLocalRename(supabase, vault, newPath, oldPath, deviceId, de
       synced_at: (/* @__PURE__ */ new Date()).toISOString()
     };
     await saveSyncState(vault, localState);
-    new import_obsidian3.Notice(`Synced rename: ${oldPath} \u2192 ${newPath}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[supabase-sync] Rename sync error:`, msg);
@@ -21982,7 +21978,6 @@ async function handleRealtimeChange(supabase, vault, payload) {
         localState[path2].synced_at = (/* @__PURE__ */ new Date()).toISOString();
       }
       await saveSyncState(vault, localState);
-      new import_obsidian3.Notice(`Deleted via remote: ${path2}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[supabase-sync] Realtime DELETE error for ${path2}:`, msg);
@@ -22007,7 +22002,6 @@ async function handleRealtimeChange(supabase, vault, payload) {
         localState[path].synced_at = (/* @__PURE__ */ new Date()).toISOString();
       }
       await saveSyncState(vault, localState);
-      new import_obsidian3.Notice(`Deleted via remote: ${path}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[supabase-sync] Realtime soft-delete error for ${path}:`, msg);
@@ -22029,7 +22023,6 @@ async function handleRealtimeChange(supabase, vault, payload) {
         synced_at: (/* @__PURE__ */ new Date()).toISOString()
       };
       await saveSyncState(vault, localState);
-      new import_obsidian3.Notice(`Synced remote change: ${path}`);
       return;
     }
     const localContent = await vault.readBinary(localFile);
@@ -22065,7 +22058,6 @@ async function handleRealtimeChange(supabase, vault, payload) {
         synced_at: (/* @__PURE__ */ new Date()).toISOString()
       };
       await saveSyncState(vault, localState);
-      new import_obsidian3.Notice(`Synced remote change: ${path}`);
     } else if (localChecksum !== lastKnownChecksum && remoteChecksum === lastKnownChecksum) {
       console.log(
         `[supabase-sync] Realtime: local has unsaved changes for ${path}, skipping remote download`
