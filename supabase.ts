@@ -92,22 +92,21 @@ const customFetch = async (
 	if (options.headers) {
 		if (typeof (options.headers as any).forEach === "function") {
 			(options.headers as any).forEach((value: string, key: string) => {
-				requestHeaders[key] = value;
+				requestHeaders[key.toLowerCase()] = value;
 			});
 		} else if (Array.isArray(options.headers)) {
 			for (const [key, value] of options.headers) {
-				requestHeaders[key] = value;
+				requestHeaders[key.toLowerCase()] = value;
 			}
 		} else {
 			for (const [key, value] of Object.entries(options.headers)) {
-				requestHeaders[key] = String(value);
+				requestHeaders[key.toLowerCase()] = String(value);
 			}
 		}
 	}
 
-	// Force a server-side User-Agent to bypass Supabase's browser-blocking security filter for sb_secret keys.
+	// Force a single, lowercase User-Agent to bypass Supabase's browser-blocking security filter for sb_secret keys.
 	// We also delete standard browser headers (origin/referer) if they are present.
-	requestHeaders["User-Agent"] = "Supabase-Client/Obsidian-Plugin";
 	requestHeaders["user-agent"] = "Supabase-Client/Obsidian-Plugin";
 	delete requestHeaders["origin"];
 	delete requestHeaders["referer"];
@@ -120,6 +119,10 @@ const customFetch = async (
 		headers: requestHeaders,
 		body,
 	});
+
+	if (response.status >= 400) {
+		console.warn(`[supabase-sync] HTTP ${response.status} Error calling ${url}:`, response.text || response.json);
+	}
 
 	const headers = makeHeaders(response.headers);
 	const ok = response.status >= 200 && response.status < 300;
