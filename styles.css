@@ -1,0 +1,9 @@
+.supabase-sync-spinning svg {
+    animation: supabase-sync-spin 2s linear infinite;
+}
+
+@keyframes supabase-sync-spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile, Platform } from "obsidian";
+import { Notice, Plugin, TFile, Platform, setIcon } from "obsidian";
 import { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 import { createSupabaseClient } from "./supabase";
 import {
@@ -21,6 +21,9 @@ export default class SupabaseSyncPlugin extends Plugin {
 	syncIntervalId: number | null = null;
 	lastSyncTime: string | null = null;
 	isSyncing = false;
+
+	statusBarItemEl: HTMLElement;
+	private statusRevertTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Promise-based mutex to serialize sync operations (Issue #6)
 	private syncMutex: Promise<void> = Promise.resolve();
@@ -51,6 +54,12 @@ export default class SupabaseSyncPlugin extends Plugin {
 
 		// Wait for workspace to be ready before auto-sync, realtime, and hooks
 		this.app.workspace.onLayoutReady(() => {
+			this.statusBarItemEl = this.addStatusBarItem();
+			this.updateStatusBar("idle");
+			this.statusBarItemEl.onClickEvent(() => {
+				this.runSync(true);
+			});
+
 			if (this.settings.autoSyncOnStartup && this.supabase) {
 				this.runSync();
 			}
@@ -65,6 +74,49 @@ export default class SupabaseSyncPlugin extends Plugin {
 		this.clearSyncInterval();
 		if (this.modifyDebounceTimer) {
 			clearTimeout(this.modifyDebounceTimer);
+		}
+		if (this.statusRevertTimer) {
+			clearTimeout(this.statusRevertTimer);
+		}
+	}
+
+	// ── Status Bar ────────────────────────────
+
+	private updateStatusBar(status: "idle" | "syncing" | "success" | "error", tooltip?: string) {
+		if (!this.statusBarItemEl) return;
+		this.statusBarItemEl.empty();
+		let iconName = "cloud";
+		let defaultTooltip = "Supabase Sync: Idle";
+
+		this.statusBarItemEl.removeClass("supabase-sync-spinning");
+
+		if (status === "syncing") {
+			iconName = "refresh-cw";
+			defaultTooltip = "Supabase Sync: Syncing...";
+			this.statusBarItemEl.addClass("supabase-sync-spinning");
+		} else if (status === "success") {
+			iconName = "check-circle";
+			defaultTooltip = "Supabase Sync: Success";
+		} else if (status === "error") {
+			iconName = "alert-circle";
+			defaultTooltip = "Supabase Sync: Error";
+		}
+
+		setIcon(this.statusBarItemEl, iconName);
+		this.statusBarItemEl.setAttribute("aria-label", tooltip || defaultTooltip);
+
+		if (this.statusRevertTimer) {
+			clearTimeout(this.statusRevertTimer);
+			this.statusRevertTimer = null;
+		}
+
+		// Revert to idle after 5 seconds
+		if (status === "success" || status === "error") {
+			this.statusRevertTimer = setTimeout(() => {
+				if (!this.isSyncing) {
+					this.updateStatusBar("idle");
+				}
+			}, 5000);
 		}
 	}
 
@@ -194,10 +246,10 @@ export default class SupabaseSyncPlugin extends Plugin {
 		}
 
 		// Queue behind any in-progress sync via mutex
-		this.syncMutex = this.syncMutex.then(() => this.executeSyncLocked());
+		this.syncMutex = this.syncMutex.then(() => this.executeSyncLocked(isManual));
 	}
 
-	private async executeSyncLocked(): Promise<void> {
+	private async executeSyncLocked(isManual: boolean): Promise<void> {
 		if (!this.supabase) return;
 
 		if (this.isSyncing) {
@@ -206,7 +258,7 @@ export default class SupabaseSyncPlugin extends Plugin {
 		}
 
 		this.isSyncing = true;
-		new Notice("Sync started...");
+		this.updateStatusBar("syncing", "Sync started...");
 
 		try {
 			let lastNoticeTime = 0;
@@ -217,10 +269,10 @@ export default class SupabaseSyncPlugin extends Plugin {
 				this.settings.deviceName,
 				this.settings.lastRemotePruneTime,
 				(current: number, total: number) => {
-					// Throttle progress notices to every 2 seconds
+					// Throttle progress updates to every 2 seconds
 					const now = Date.now();
 					if (now - lastNoticeTime > 2000) {
-						new Notice(`Syncing... (${current}/${total})`, 1500);
+						this.updateStatusBar("syncing", `Syncing... (${current}/${total})`);
 						lastNoticeTime = now;
 					}
 				}
@@ -249,14 +301,26 @@ export default class SupabaseSyncPlugin extends Plugin {
 				if (result.errors.length > 3) {
 					msg += `\n  + ${result.errors.length - 3} more`;
 				}
+				this.updateStatusBar("error", "Sync completed with errors");
+			} else {
+				this.updateStatusBar("success", msg);
 			}
-			new Notice(msg, result.errors.length > 0 ? 8000 : 4000);
+
+			// Only show Notice popup on error or if triggered manually
+			if (result.errors.length > 0 || isManual) {
+				new Notice(msg, result.errors.length > 0 ? 8000 : 4000);
+			}
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			console.error("[supabase-sync] Sync failed:", msg);
-			new Notice(`Sync failed: ${msg}`);
+			this.updateStatusBar("error", `Sync failed`);
+			if (isManual) new Notice(`Sync failed: ${msg}`);
 		} finally {
 			this.isSyncing = false;
+			// Only clear if not in an error/success state that's waiting to revert
+			if (this.statusBarItemEl && this.statusBarItemEl.getAttribute("aria-label")?.includes("Syncing")) {
+				this.updateStatusBar("idle");
+			}
 		}
 	}
 
