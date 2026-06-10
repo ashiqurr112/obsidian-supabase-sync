@@ -74,7 +74,19 @@ export class SupabaseSyncSettingTab extends PluginSettingTab {
 			text: "ALTER TABLE file_sync REPLICA IDENTITY FULL;",
 		});
 		noteBox.createSpan({
-			text: " in your Supabase SQL editor. Without this, remote file deletions will not propagate to your devices.",
+			text: " in your Supabase SQL editor. Without this, remote file deletions will not propagate. Also, ensure your table has the ",
+		});
+		noteBox.createEl("code", {
+			text: "updated_by",
+		});
+		noteBox.createSpan({
+			text: " column (if missing, run: ",
+		});
+		noteBox.createEl("code", {
+			text: "ALTER TABLE file_sync ADD COLUMN IF NOT EXISTS updated_by TEXT;",
+		});
+		noteBox.createSpan({
+			text: ").",
 		});
 
 		noteBox.createEl("br");
