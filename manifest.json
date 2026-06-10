@@ -1,0 +1,9 @@
+{
+	"id": "obsidian-supabase-sync",
+	"name": "Supabase Sync",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Sync vault to Supabase storage",
+	"author": "Ashiqur",
+	"isDesktopOnly": false
+}
