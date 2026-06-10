@@ -87,10 +87,27 @@ const customFetch = async (
 		body = JSON.stringify(options.body);
 	}
 
+	const requestHeaders: Record<string, string> = {};
+	if (options.headers) {
+		if (typeof (options.headers as any).forEach === "function") {
+			(options.headers as any).forEach((value: string, key: string) => {
+				requestHeaders[key] = value;
+			});
+		} else if (Array.isArray(options.headers)) {
+			for (const [key, value] of options.headers) {
+				requestHeaders[key] = value;
+			}
+		} else {
+			for (const [key, value] of Object.entries(options.headers)) {
+				requestHeaders[key] = String(value);
+			}
+		}
+	}
+
 	const response = await requestUrl({
 		url,
 		method: (options.method as string) || "GET",
-		headers: (options.headers as Record<string, string>) || {},
+		headers: requestHeaders,
 		body,
 	});
 
