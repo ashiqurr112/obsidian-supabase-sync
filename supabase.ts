@@ -118,6 +118,7 @@ const customFetch = async (
 		method: (options.method as string) || "GET",
 		headers: requestHeaders,
 		body,
+		throw: false,
 	});
 
 	if (response.status >= 400) {
