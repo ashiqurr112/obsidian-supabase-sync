@@ -351,7 +351,7 @@ export async function handleLocalRename(
 		};
 		await saveSyncState(vault, localState);
 
-		new Notice(`Synced rename: ${oldPath} → ${newPath}`);
+		
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
 		console.error(`[supabase-sync] Rename sync error:`, msg);
@@ -729,7 +729,7 @@ export async function handleRealtimeChange(
 			}
 			await saveSyncState(vault, localState);
 
-			new Notice(`Deleted via remote: ${path}`);
+			
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			console.error(`[supabase-sync] Realtime DELETE error for ${path}:`, msg);
@@ -760,7 +760,7 @@ export async function handleRealtimeChange(
 			}
 			await saveSyncState(vault, localState);
 
-			new Notice(`Deleted via remote: ${path}`);
+			
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			console.error(`[supabase-sync] Realtime soft-delete error for ${path}:`, msg);
@@ -787,7 +787,7 @@ export async function handleRealtimeChange(
 				synced_at: new Date().toISOString(),
 			};
 			await saveSyncState(vault, localState);
-			new Notice(`Synced remote change: ${path}`);
+			
 			return;
 		}
 
@@ -832,7 +832,7 @@ export async function handleRealtimeChange(
 				synced_at: new Date().toISOString(),
 			};
 			await saveSyncState(vault, localState);
-			new Notice(`Synced remote change: ${path}`);
+			
 		} else if (localChecksum !== lastKnownChecksum && remoteChecksum === lastKnownChecksum) {
 			// Only local changed — remote is stale, skip download.
 			// The next full sync or debounced modify will upload local changes.
