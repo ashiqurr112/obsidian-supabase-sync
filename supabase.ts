@@ -87,6 +87,7 @@ const customFetch = async (
 		body = JSON.stringify(options.body);
 	}
 
+	console.log(`[supabase-sync] Fetching: ${url}`);
 	const requestHeaders: Record<string, string> = {};
 	if (options.headers) {
 		if (typeof (options.headers as any).forEach === "function") {
@@ -103,6 +104,7 @@ const customFetch = async (
 			}
 		}
 	}
+	console.log(`[supabase-sync] Request headers keys:`, Object.keys(requestHeaders));
 
 	const response = await requestUrl({
 		url,
